@@ -76,7 +76,7 @@ local config_file = mq.TLO.MacroQuest.Path() .. "\\config\\collect.ini"
 local WaitTime = 750
 
 -- Default Write output to 'info' messages
--- Override via /testme debug
+-- Override via /collect debug
 Write.loglevel = 'info'
 
 -- An example config for items that each character wants

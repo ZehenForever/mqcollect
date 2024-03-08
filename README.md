@@ -10,9 +10,13 @@ git clone https://github.com/ZehenForever/mqcollect.git collect
 
 # Usage
 
-Run the Lua script in game:
+Run the Lua script in game for each relevant character:
 ```
 /lua run collect
+```
+Or for the whole group at once:
+```
+/e3bcga /lua run collect
 ```
 
 The first time it runs, it will create an example `collect.ini` file at `C:\PathToE3MQ\config\collect.ini`.  It will look like so:

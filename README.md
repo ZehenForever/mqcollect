@@ -94,7 +94,7 @@ One character, **CharOne** has just finished adventuring with their group, and w
         Blue Diamond=true
         Raw Diamond=true
 
-- **CharOne** and runs the command '/give CharVendor'
+- **CharOne** runs the command '/give CharVendor'
 
     This will give all of the Diamond Coin, Blue Diamond, and Raw Diamond that **CharOne** has in their inventory to **CharVendor**.
 

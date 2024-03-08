@@ -1,6 +1,6 @@
 # mqcollect
 
-A Lua script for MQ + E3 that allows individual characters to store a list of items they want to collect and to use that to collect those items from all other characters in their group.
+A Lua script for MQ + E3 that allows individual characters to store a list of items they want to collect from the other characers in their group.
 
 # Installing
 ```
@@ -8,14 +8,14 @@ cd C:\YourE3MQ2\lua
 git clone https://github.com/ZehenForever/mqcollect.git collect
 ```
 
-# Using
+# Usage
 
-Run the Lua script in the game
+Run the Lua script in game:
 ```
 /lua run collect
 ```
 
-The first time it runs, it will create an example `collect.ini` file at `C:\YourE3MQ\config\collect.ini`.  It will look like so:
+The first time it runs, it will create an example `collect.ini` file at `C:\PathToE3MQ\config\collect.ini`.  It will look like so:
 ```
 [CharacterOne]
 Bone Chips=true
@@ -28,7 +28,7 @@ Fire Mephit Blood=true
 ```
 
 # Customizing
-Freely edit the ini file at `C:\YourE3MQ\config\collect.ini` to set up your characters.  This file will be re-loaded every time you run relevant script commmands, so feel free to change the file without needing to re-run the script.
+Freely edit the ini file at `C:\PathToE3MQ\config\collect.ini` to set up your characters.  This file will be re-loaded every time you run relevant script commmands, so feel free to change the file without needing to restart the script.
 
 # Available commands
 

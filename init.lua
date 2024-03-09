@@ -17,13 +17,13 @@
         any items that the current character has configured.
 
     /collect add
-        Adds the item on the current character's cursor to their settings file
+        Adds the item on the current character's cursor to their ini section
 
     /collect add target
-        Adds the item on the current character's cursor to their current target's settings file
+        Adds the item on the current character's cursor to their current target's ini section
    
     /collect add <character>
-        Adds the item on the current character's cursor to the <character>'s settings file
+        Adds the item on the current character's cursor to the <character>'s ini section
    
     /collect debug
         Enables debug mode for more verbose output.
@@ -70,7 +70,7 @@ local mq = require('mq')
 local Write = require('lib/Write')
 local ini = require('lib/inifile')
 
-local config_file = mq.TLO.MacroQuest.Path() .. "\\config\\collect.ini"
+local config_file = mq.TLO.MacroQuest.Path() .. '\\config\\collect.ini'
 
 -- Time in ms to wait for things like windows opening
 local WaitTime = 750
@@ -78,6 +78,11 @@ local WaitTime = 750
 -- Default Write output to 'info' messages
 -- Override via /collect debug
 Write.loglevel = 'info'
+
+-- A flag to indicate when a character is done sending items from their inventory.
+-- Used during the /collect command to wait before moving on to the next characater.
+-- An event handler will set this to true when a character tells us they are done.
+local char_done = true
 
 -- An example config for items that each character wants
 -- We'll use this to write out an example config file if one does not exist
@@ -240,12 +245,10 @@ local give_item = function (name, target)
 
 end
 
-local char_done = true
-
 -- Instructs the target character to give us items
 local function ask_for_items(target)
 
-    -- We'll block until this is true
+    -- We'll wait until this is true
     -- Our event handler will set this to true when the target tells us they are done
     char_done = false
 
@@ -273,32 +276,52 @@ local add_item_on_cursor = function (target)
         target = mq.TLO.Me.Name()
     end
 
-    -- Check to make sure we have a valid target
-    if mq.TLO.Spawn(target) == nil then
-        Write.Info('Target "%s" not found', target)
-        return
-    end
-
     -- Check to make sure we have an item on the cursor
     local item = mq.TLO.Cursor.Name()
     if item == nil then
         Write.Info('No item on cursor')
         return
     end
-    Write.Info('Adding %s to settings', item)
+
+     -- Check to make sure we have a valid target
+    if mq.TLO.Spawn(target) == nil then
+        Write.Info('Target "%s" not found', target)
+        return
+    end
 
     -- Add it to the settings file and save that file
     settings[target][item] = true
     save_settings(settings)
+    Write.Info('Added "%s" to %s settings', item, target)
 
     -- Drop the item from the cursor into our inventory
     mq.cmd('/autoinventory')
 end
 
 -- Collects all configured items from the rest of the group
+-- Receives bind callback from /collect
 local collect = function (...)
     local args = {...}
 
+    -- Debug args
+    for i,arg in ipairs(args) do
+        Write.Debug('/collect arg[%d]: %s', i, arg)
+    end
+
+    -- Command: /collect
+    -- Loop through the group, and ask each group member for items
+    -- that this character wants
+    if args[1] == nil then
+        for i = 1, mq.TLO.Group.Members() do
+            local member = mq.TLO.Group.Member(i)
+            if member then
+                Write.Debug('Asking %s for items I want', member.Name())
+                ask_for_items(member.Name())
+            end
+        end
+    end
+
+    -- Command: /collect debug
     -- Allow setting debug mode to get more verbose output
     if args[1] == 'debug' then
         Write.loglevel = 'debug'
@@ -306,6 +329,7 @@ local collect = function (...)
         return
     end
 
+    -- Command: /collect sort
     -- Allow sorting of the settings
     if args[1] == 'sort' then
         settings = ini.parse(config_file)
@@ -315,44 +339,40 @@ local collect = function (...)
         return
     end
 
-    -- Add an item from the cursor to the target character's settings
+    -- Command: /collect add target
+    -- Add an item from the cursor to our current target's settings
     if args[1] == 'add' and args[2] == 'target' then
         add_item_on_cursor(mq.TLO.Target.Name())
         return
     end
 
+    -- Command: /collect add <target>
+    -- Add an item from the cursor to the specified <target>'s settings
+    if args[1] == 'add' and args[2] ~= nil then
+        add_item_on_cursor(args[2])
+        return
+    end
+
+    -- Command: /collect add
     -- Add an item from the cursor to the current character's settings
     if args[1] == 'add' and args[2] == nil then
         add_item_on_cursor(mq.TLO.Me.Name())
         return
     end
 
-    -- Debug args
-    for i,arg in ipairs(args) do
-        Write.Debug('arg[%d]: %s', i, arg)
-    end
-
-    Write.Info('Collecting items from the group is not yet implemented')
-
-    -- Ask each group member for items that this character wants
-    for i = 1, mq.TLO.Group.Members() do
-        local member = mq.TLO.Group.Member(i)
-        if member then
-            Write.Debug('Asking %s for items I want', member.Name())
-            ask_for_items(member.Name())
-        end
-    end
 
 end
 
--- Gives all of the target's configured items
--- from the current character to the target
+-- Bind callback for /give
+-- Command: /give <target>
+-- Loads the target's configured items and gives any items
+-- from the current character's inventory to the target
 local give = function (...)
     local args = {...}
 
     -- Debug args
     for i,arg in ipairs(args) do
-        printf('arg[%d]: %s', i, arg)
+        Write.Debug('/give arg[%d]: %s', i, arg)
     end
 
     -- Our target is the first argument

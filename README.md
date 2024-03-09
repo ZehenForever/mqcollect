@@ -7,6 +7,7 @@ A Lua script for MQ + E3 that allows individual characters to store a list of it
 cd C:\YourE3MQ2\lua
 git clone https://github.com/ZehenForever/mqcollect.git collect
 ```
+Or [download the zip file](https://github.com/ZehenForever/mqcollect/archive/refs/heads/main.zip).
 
 # Usage
 
@@ -48,15 +49,15 @@ any items that the current character has configured.
 
 `/collect add`
 
-Adds the item on the current character's cursor to their settings file. Useful for creating a button that can be clicked on with an item on the cursor to update the ini file accordingly.
+Adds the item on the current character's cursor to their section in the ini file. Useful for creating a button that can be clicked on with an item on the cursor to update the ini file accordingly.
 
 `/collect add target`
 
-Adds the item on the current character's cursor to their current target's settings file. Useful for creating a button that can be clicked on with an item on the cursor to update the ini file accordingly.
+Adds the item on the current character's cursor to their current target's section in the ini file. Useful for creating a button that can be clicked on with an item on the cursor to update the ini file accordingly.
 
 `/collect add <character>`
 
-Adds the item on the current character's cursor to the &lt;character&gt;'s settings file. Useful for creating a button that can be clicked on with an item on the cursor to update the ini file accordingly.
+Adds the item on the current character's cursor to the &lt;character&gt;'s section in the ini file. Useful for creating a button that can be clicked on with an item on the cursor to update the ini file accordingly.
 
 `/collect debug`
 
@@ -64,7 +65,7 @@ Enables debug mode for more verbose output.
     
 `/collect sort (not implemented yet)`
 
-Sorts the settings in the config file and saves them.
+Sorts the settings in the `collect.ini` file and saves them.
 
 # Example scenario:
 

@@ -64,7 +64,7 @@
 
             This will give all of the Diamond Coin, Blue Diamond, and Raw Diamond that CharOne 
             has in their inventory to CharVendor.
---]]
+]]
 
 local mq = require('mq')
 local Write = require('lib/Write')

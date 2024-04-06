@@ -171,17 +171,11 @@ local trade_window_closed = function ()
     return mq.TLO.Window('TradeWnd').Open() == false
 end
 
--- Navigate to a target and wait for arrival
-local nav_target = function (target)
-    mq.cmdf('/target "%s"', target)
-    mq.delay(WaitTime, have_target)
-    mq.cmd('/nav target distance=10')
-
-    -- Wait while we travel
-    while mq.TLO.Navigation.Active() do
-        mq.delay(100)
+-- Set the target if it is not already set
+local set_target = function (target)
+    if mq.TLO.Target.Name() ~= target then
+        mq.cmdf('/target "%s"', target)
     end
-    Write.Debug('Arrived at %s', target)
 end
 
 -- Check if the current target is the same as the one we want
@@ -191,6 +185,22 @@ local check_target = function (target)
     else
         return false
     end
+end
+
+-- Navigate to a target and wait for arrival
+local nav_target = function (target)
+
+    -- If our specified target and our current target are not the same
+    -- then target the new target before navigating
+    set_target(target)
+    mq.delay(WaitTime, have_target)
+    mq.cmd('/nav target distance=10')
+
+    -- Wait while we travel
+    while mq.TLO.Navigation.Active() do
+        mq.delay(100)
+    end
+    Write.Debug('Arrived at %s', target)
 end
 
 local find_item = function (name)
@@ -269,7 +279,7 @@ end
 local give_item = function (name, target)
 
     -- Always make sure we have the right target before attempting a trade
-    mq.cmdf('/target "%s"', target)
+    set_target(target)
     if not check_target(target) then
         Write.Info('Target "%s" not found', target)
         return
@@ -286,7 +296,7 @@ local give_item = function (name, target)
 
     -- If we don't find any matches, then return
     if #items == 0 then
-        Write.Info('"%s" was not found', name)
+        Write.Debug('"%s" was not found', name)
         return
     end
 
@@ -465,17 +475,22 @@ local give = function (...)
         return
     end
 
-
-    -- Our target is the first argument
+    -- Our target is the first argument or the current target
     local target = args[1]
+    if target == nil and have_target() then
+        target = mq.TLO.Target.Name()
+    end
+
+    -- If we still don't have a target, then return
     if target == nil then
         Write.Info('No target specified')
-        Write.Info('Usage: /give <target>')
+        Write.Info('Usage: /give')
+        Write.Info('Usage: /give <character name>')
         return
     end
 
     -- Make sure we have the right target
-    mq.cmdf('/target "%s"', target)
+    set_target(target)
     if not check_target(target) then
         Write.Info('Target "%s" not found', target)
         return

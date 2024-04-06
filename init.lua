@@ -64,7 +64,7 @@
 
             This will give all of the Diamond Coin, Blue Diamond, and Raw Diamond that CharOne 
             has in their inventory to CharVendor.
---]]
+]]
 
 local mq = require('mq')
 local Write = require('lib/Write')
@@ -503,7 +503,7 @@ end
 --[[ 
     Register event handlers and command binds
     Loop our process and yield on every frame
---]]
+]]
 
 -- Register an event handler for when a character tells us they are done
 mq.event('char_done', '#1# tells you, \'Done sending you items\'', handle_char_done)

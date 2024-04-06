@@ -193,17 +193,69 @@ local check_target = function (target)
     end
 end
 
+local find_item = function (name)
+    return mq.TLO.FindItem('='..name).Name()
+end
+
+-- Go through each bag and slot to find all items
+-- that match the name
+local find_all_items = function (name, match_type)
+    local items = {}
+    local count = 1
+
+    -- We have 10 bag slots
+    for i = 1, 10 do
+        local bag = 'pack'..tostring(i)
+
+        -- Only process bags with slots ; 0 means no bag?
+        if mq.TLO.InvSlot(bag).ID() and mq.TLO.InvSlot(bag).Item.Container() > 0 then
+            local slot_count = mq.TLO.InvSlot(bag).Item.Container()
+
+            -- Process each slot in this bag
+            for j = 1, slot_count do
+
+                -- If we find an item in this slot
+                if mq.TLO.InvSlot(bag).Item.Item(j)() ~= nil then
+                    local item = mq.TLO.InvSlot(bag).Item.Item(j)
+                    local pack_slot = bag .. ' ' .. j
+                    local found = false
+
+                    -- If we need an exact match
+                    if match_type == 'exact' then
+                        if item.Name() == name then
+                            Write.Debug('Found item: %s in "%s"', item.Name(), pack_slot)
+                            found = true
+                        end
+                    end
+
+                    -- If we need a partial match
+                    if match_type == 'partial' then
+                        local ok = string.find(string.lower(item.Name()),string.lower(name),nil,true) ~= nil
+                        if ok then
+                            Write.Debug('Found matching item: %s in %s', item.Name(), pack_slot)
+                            found = true
+                        end
+                    end
+
+                    -- If we found the item, add it to our list
+                    if found then
+                        items[count] = {
+                            ['name'] = item.Name(),
+                            ['slot'] = pack_slot
+                        }
+                        count = count + 1
+                    end
+
+                end
+            end
+        end
+    end
+
+    return items
+end
+
 -- Gives an item to the target
 local give_item = function (name, target)
-
-    -- Find the item in the inventory
-    local item_id = mq.TLO.FindItem('='..name).ID()
-
-    -- If we don't find it, exit here
-    if item_id == nil then
-        Write.Debug('No "%s" in inventory', name)
-        return
-    end
 
     -- Always make sure we have the right target before attempting a trade
     mq.cmdf('/target "%s"', target)
@@ -218,29 +270,35 @@ local give_item = function (name, target)
         nav_target(target)
     end
 
-    -- Locate the item in the inventory
-    local item_slot = mq.TLO.FindItem('='..name).ItemSlot()
-    local item_slot2 = mq.TLO.FindItem('='..name).ItemSlot2()
-    Write.Debug('Item "%s" (%d) is in slot %d.%d', name, item_id, item_slot, item_slot2)
+    -- Get a list of all items in the inventory that match the name
+    local items = find_all_items(name, 'exact')
 
-    -- Pick up the item
-    local pickup1 = item_slot - 22
-    local pickup2 = item_slot2 + 1
-    mq.cmd('/shift /itemnotify in pack' .. pickup1 .. ' ' .. pickup2 .. ' leftmouseup')
-    mq.delay(WaitTime, cursor_has_item)
+    -- If we don't find any matches, then return
+    if #items == 0 then
+        Write.Info('"%s" was not found', name)
+        return
+    end
 
-    -- Click theitem on to the target to begin the trade
-    mq.cmd('/click left target')
-    mq.delay(WaitTime, cursor_is_empty)
+    -- Iterate through all matching inventory items, and give them to the target
+    for i,v in ipairs(items) do
 
-    -- Click the Trade button to complete the trade
-    mq.cmd('/notify TradeWnd TRDW_Trade_Button leftmouseup')
-    mq.delay(WaitTime, trade_window_closed)
+        Write.Debug('Giving "%s" from "%s"', v.name, v.slot)
+        mq.cmd('/shift /itemnotify in ' .. v.slot .. ' leftmouseup')
+        mq.delay(WaitTime, cursor_has_item)
 
-    -- If the trade window is still open, wait for it to close
-    -- The target character may not have clicked the trade button yet
-    while trade_window_open() do
-        mq.delay(100)
+        -- Click theitem on to the target to begin the trade
+        mq.cmd('/click left target')
+        mq.delay(WaitTime, cursor_is_empty)
+
+        -- Click the Trade button to complete the trade
+        mq.cmd('/notify TradeWnd TRDW_Trade_Button leftmouseup')
+        mq.delay(WaitTime, trade_window_closed)
+
+        -- If the trade window is still open, wait for it to close
+        -- The target character may not have clicked the trade button yet
+        while trade_window_open() do
+            mq.delay(100)
+        end
     end
 
 end
@@ -374,6 +432,29 @@ local give = function (...)
     for i,arg in ipairs(args) do
         Write.Debug('/give arg[%d]: %s', i, arg)
     end
+
+    -- Allow a finditem search for the target
+    if args[1] == 'find' then
+        Write.Debug('Searching for %s', args[2])
+        local result = find_item(args[2])
+        Write.Debug('Found item: %s', result)
+        return
+    end
+
+    -- Allow a finditem search for the target
+    if args[1] == 'findall' then
+        Write.Debug('Searching for all %s', args[2])
+        find_all_items(args[2], 'exact')
+        return
+    end
+
+    -- Allow a finditem search for the target
+    if args[1] == 'findallmatch' then
+        Write.Debug('Searching for all matches for %s', args[2])
+        find_all_items(args[2], 'partial')
+        return
+    end
+
 
     -- Our target is the first argument
     local target = args[1]

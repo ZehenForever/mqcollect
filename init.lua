@@ -254,6 +254,17 @@ local find_all_items = function (name, match_type)
     return items
 end
 
+-- Click the trade window Trade button
+local click_trade = function()
+    mq.cmd('/notify TradeWnd TRDW_Trade_Button leftmouseup')
+
+    -- If the trade window is still open, wait for it to close
+    -- The target character may not have clicked the trade button yet
+    while trade_window_open() do
+        mq.delay(100)
+    end
+end
+
 -- Gives an item to the target
 local give_item = function (name, target)
 
@@ -280,6 +291,8 @@ local give_item = function (name, target)
     end
 
     -- Iterate through all matching inventory items, and give them to the target
+    local trade_count = 1
+    local trade_slots = 8
     for i,v in ipairs(items) do
 
         Write.Debug('Giving "%s" from "%s"', v.name, v.slot)
@@ -290,15 +303,12 @@ local give_item = function (name, target)
         mq.cmd('/click left target')
         mq.delay(WaitTime, cursor_is_empty)
 
-        -- Click the Trade button to complete the trade
-        mq.cmd('/notify TradeWnd TRDW_Trade_Button leftmouseup')
-        mq.delay(WaitTime, trade_window_closed)
-
-        -- If the trade window is still open, wait for it to close
-        -- The target character may not have clicked the trade button yet
-        while trade_window_open() do
-            mq.delay(100)
+        -- Click the trade button if we have filled up our trade slots
+        -- or if we are on the last item to be traded
+        if trade_count % trade_slots == 0 or i == #items then
+            click_trade()
         end
+        trade_count = trade_count + 1
     end
 
 end

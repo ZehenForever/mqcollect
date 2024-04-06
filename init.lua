@@ -7,8 +7,12 @@
     -----------------------------------------------------------------------------------------------
     AVAILABLE COMMANDS:
 
+    /give
+        Loads the current target's configured items, and if the 
+        current character has any, they are given to the target
+
     /give <character>
-        Loads the target <character>'s configured items, and if the 
+        Loads the <character>'s configured items, and if the 
         current character has any, they are given to the target <character>.
  
     /collect
@@ -203,8 +207,14 @@ local nav_target = function (target)
     Write.Debug('Arrived at %s', target)
 end
 
-local find_item = function (name)
-    return mq.TLO.FindItem('='..name).Name()
+local find_item = function (name, match_type)
+    if match_type == nil then match_type = 'exact' end
+    if match_type == 'exact' then
+        return mq.TLO.FindItem('='..name).Name()
+    end
+    if match_type == 'partial' then
+        return mq.TLO.FindItem(name).Name()
+    end
 end
 
 -- Go through each bag and slot to find all items
@@ -289,6 +299,13 @@ local give_item = function (name, target)
     if target_distance(target) > 15 then
         Write.Debug('Moving to %s', target)
         nav_target(target)
+    end
+
+    -- Find if the item exists at all in the inventory
+    -- This is a very fast search, but only returns the first match
+    if find_item(name) == nil then
+        Write.Debug('"%s" was not found', name)
+        return
     end
 
     -- Get a list of all items in the inventory that match the name
@@ -424,8 +441,8 @@ local collect = function (...)
         return
     end
 
-    -- Command: /collect add <target>
-    -- Add an item from the cursor to the specified <target>'s settings
+    -- Command: /collect add <character>
+    -- Add an item from the cursor to the specified <character>'s settings
     if args[1] == 'add' and args[2] ~= nil then
         add_item_on_cursor(args[2])
         return
@@ -442,7 +459,7 @@ local collect = function (...)
 end
 
 -- Bind callback for /give
--- Command: /give <target>
+-- Command: /give <character>
 -- Loads the target's configured items and gives any items
 -- from the current character's inventory to the target
 local give = function (...)
@@ -453,7 +470,14 @@ local give = function (...)
         Write.Debug('/give arg[%d]: %s', i, arg)
     end
 
+    --[[
+        Some test commands to help with testing certain functions
+        /give find <item>
+        /give findall <item>
+    ]]
+
     -- Allow a finditem search for the target
+    -- /give find <item>
     if args[1] == 'find' then
         Write.Debug('Searching for %s', args[2])
         local result = find_item(args[2])
@@ -461,19 +485,27 @@ local give = function (...)
         return
     end
 
-    -- Allow a finditem search for the target
+    -- Search for all occurrences of an item that exactly matches the name
+    -- /give findall <item>
     if args[1] == 'findall' then
         Write.Debug('Searching for all %s', args[2])
         find_all_items(args[2], 'exact')
         return
     end
 
-    -- Allow a finditem search for the target
+    -- Search for all occurrences of an item that partially matches the name
+    -- /give findall <item>
     if args[1] == 'findallmatch' then
         Write.Debug('Searching for all matches for %s', args[2])
         find_all_items(args[2], 'partial')
         return
     end
+
+    --[[
+        The user commands 
+        /give
+        /give <character>
+    ]]
 
     -- Our target is the first argument or the current target
     local target = args[1]

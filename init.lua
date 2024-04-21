@@ -140,6 +140,20 @@ local table_sort = function (tbl)
     return t
 end
 
+-- Split a string by a delimiter
+local split = function (str, delimiter)
+    local result = {}
+    local from = 1
+    local delim_from, delim_to = string.find(str, delimiter, from)    
+    while delim_from do
+        table.insert(result, string.sub(str, from, delim_from - 1))
+        from = delim_to + 1
+        delim_from, delim_to = string.find(str, delimiter, from)
+    end
+    table.insert(result, string.sub(str, from))
+    return result
+end
+
 -- convenience function to check if we are in game
 local in_game = function ()
     return mq.TLO.MacroQuest.GameState() == 'INGAME'
@@ -403,10 +417,11 @@ local collect = function (...)
         Write.Debug('/collect arg[%d]: %s', i, arg)
     end
 
-    -- Command: /collect
+    -- Command: /collect group
+    --      or: /collect
     -- Loop through the group, and ask each group member for items
     -- that this character wants
-    if args[1] == nil then
+    if args[1] == 'group' or args[1] == nil then
         for i = 1, mq.TLO.Group.Members() do
             local member = mq.TLO.Group.Member(i)
             if member then
@@ -414,6 +429,20 @@ local collect = function (...)
                 ask_for_items(member.Name())
             end
         end
+    end
+
+    -- Command: /collect e3bots
+    if args[1] == 'e3bots' then
+        local connectedClients = mq.TLO.MQ2Mono.Query('e3,E3Bots.ConnectedClients')()
+        local e3peers = split(connectedClients, ',')
+        for i, name in ipairs(e3peers) do
+        local member = mq.TLO.Spawn(string.format('pc = %s', name))
+        if member() then
+            Write.Debug('Asking %s for items I want', member.Name()) -- Uncomment if needed
+            ask_for_items(member.Name())
+        end
+    end
+
     end
 
     -- Command: /collect debug

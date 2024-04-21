@@ -55,7 +55,7 @@ Iterates through group members and instructs them one at a time
 to use the `/give <character>` command to give the current character 
 any items that the current character has configured.
 
-`collect e3bots`
+`/collect e3bots`
 
 Iterates through all connected E3 bots and instructs them one at a time
 to use the `/give <character>` command to give the current character 

@@ -43,7 +43,17 @@ From any character, loads the target &lt;character&gt;'s configured items, and i
  
 `/collect`
 
+Alias for "/collect group"
+
+`/collect group`
+
 Iterates through group members and instructs them one at a time
+to use the `/give <character>` command to give the current character 
+any items that the current character has configured.
+
+`collect e3bots`
+
+Iterates through all connected E3 bots and instructs them one at a time
 to use the `/give <character>` command to give the current character 
 any items that the current character has configured.
 

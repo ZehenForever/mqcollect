@@ -436,13 +436,12 @@ local collect = function (...)
         local connectedClients = mq.TLO.MQ2Mono.Query('e3,E3Bots.ConnectedClients')()
         local e3peers = split(connectedClients, ',')
         for i, name in ipairs(e3peers) do
-        local member = mq.TLO.Spawn(string.format('pc = %s', name))
-        if member() then
-            Write.Debug('Asking %s for items I want', member.Name()) -- Uncomment if needed
-            ask_for_items(member.Name())
+            local member = mq.TLO.Spawn(string.format('pc = %s', name))
+            if member() then
+                Write.Debug('Asking %s for items I want', member.Name())
+                ask_for_items(member.Name())
+            end
         end
-    end
-
     end
 
     -- Command: /collect debug

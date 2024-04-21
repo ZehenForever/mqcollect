@@ -37,9 +37,13 @@ Freely edit the ini file at `C:\PathToE3MQ\config\collect.ini` to set up your ch
 
 # Available commands
 
-`/give <character>`
+`/give <current target>`
+
+From any character, loads the target's configured items, and if the current character has any of those, they are given to the target.
+
+`/give <character name>`
         
-From any character, loads the target &lt;character&gt;'s configured items, and if the current character has any of those, they are given to &lt;character&gt;.
+From any character, loads the specified &lt;character name&gt;'s configured items, and if the current character has any of those, they are given to the specified &lt;character name&gt;.
  
 `/collect`
 

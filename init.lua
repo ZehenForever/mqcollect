@@ -398,6 +398,11 @@ local add_item_on_cursor = function (target)
         return
     end
 
+    -- If the settings for the target do not exist, create them
+    if settings[target] == nil then
+        settings[target] = {}
+    end
+
     -- Add it to the settings file and save that file
     settings[target][item] = true
     save_settings(settings)
@@ -442,6 +447,21 @@ local collect = function (...)
                 ask_for_items(member.Name())
             end
         end
+    end
+
+    -- Command: /collect list
+    -- List all configured items for the current character
+    if args[1] == 'list' then
+        local char = mq.TLO.Me.Name()
+        settings = ini.parse(config_file)
+        if settings[char] == nil then
+            Write.Info('%s does not have any configured items to collect', char)
+            return
+        end
+        for k,v in pairs(settings[char]) do
+            Write.Info('%s', k)
+        end
+        return
     end
 
     -- Command: /collect debug

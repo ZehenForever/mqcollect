@@ -233,25 +233,38 @@ end
 
 -- Go through each bag and slot to find all items
 -- that match the name
-local find_all_items = function (name, match_type)
+local find_all_items = function (location, name, match_type)
     local items = {}
     local count = 1
 
-    -- We have 10 bag slots
-    for i = 1, 10 do
-        local bag = 'pack'..tostring(i)
+    if location ~= 'pack' and location ~= 'bank' then
+        Write.Error('Invalid search location: %s', location)
+        return
+    end
+
+    -- Set the total slots based on the location
+    local total_slots = 0
+    if location == 'pack' then
+        total_slots = 10
+    elseif location == 'bank' then
+        total_slots = 24
+    end
+
+    -- Iterate through each slot in the location (pack or bank)
+    for i = 1, total_slots do
+        local inv_slot = location..tostring(i)
 
         -- Only process bags with slots ; 0 means no bag?
-        if mq.TLO.InvSlot(bag).ID() and mq.TLO.InvSlot(bag).Item.Container() > 0 then
-            local slot_count = mq.TLO.InvSlot(bag).Item.Container()
+        if mq.TLO.InvSlot(inv_slot).ID() and mq.TLO.InvSlot(inv_slot).Item.Container() > 0 then
+            local slot_count = mq.TLO.InvSlot(inv_slot).Item.Container()
 
             -- Process each slot in this bag
             for j = 1, slot_count do
 
                 -- If we find an item in this slot
-                if mq.TLO.InvSlot(bag).Item.Item(j)() ~= nil then
-                    local item = mq.TLO.InvSlot(bag).Item.Item(j)
-                    local pack_slot = bag .. ' ' .. j
+                if mq.TLO.InvSlot(inv_slot).Item.Item(j)() ~= nil then
+                    local item = mq.TLO.InvSlot(inv_slot).Item.Item(j)
+                    local pack_slot = inv_slot .. ' ' .. j
                     local found = false
 
                     -- If we need an exact match
@@ -394,6 +407,34 @@ local collect = function (...)
         end
     end
 
+    -- Command: /collect bank <character>
+    -- Collect all configured items from the bank for the specified <character>
+    if args[1] == 'bank' and args[2] ~= nil then
+        local target = args[2]
+        set_target(target)
+        if check_target(target) == false then 
+            Write.Error('Target "%s" not found', target)
+            return
+        end
+        for k,v in pairs(settings[target]) do
+            Write.Debug('Attempting to collect %s from bank for %s', k, target)
+            local results = find_all_items('bank', k, 'exact')
+            if results == nil then goto continue end
+            if #results > 0 then
+                for i, item in ipairs(results) do
+                    mq.cmd('/shift /itemnotify in ' .. item.slot .. ' leftmouseup')
+                    mq.delay(WaitTime, cursor_has_item)
+                    mq.cmd('/autoinventory')
+                    mq.delay(WaitTime, cursor_is_empty)
+                    
+                    -- TODO: Figure out why the last item in the set needs to be autoinventory'd twice
+                    mq.cmd('/autoinventory')
+                end
+            end
+            ::continue::
+        end
+    end
+
     -- Command: /collect list
     -- List all configured items for the current character
     if args[1] == 'list' then
@@ -479,18 +520,26 @@ local give = function (...)
     end
 
     -- Search for all occurrences of an item that exactly matches the name
-    -- /give findall <item>
-    if args[1] == 'findall' then
-        Write.Debug('Searching for all %s', args[2])
-        find_all_items(args[2], 'exact')
+    -- /give findall <pack|bank> <item>
+    if args[1] == 'findall' and (args[2] ~= 'pack' and args[2] ~= 'bank') then
+        Write.Info('Usage: /give findall <pack|bank> <item>')
+        return
+    end
+    if args[1] == 'findall' and (args[2] == 'pack' or args[2] == 'bank') then
+        Write.Debug('Searching %s for all %s', args[2], args[3])
+        find_all_items(args[2], args[3], 'exact')
         return
     end
 
     -- Search for all occurrences of an item that partially matches the name
     -- /give findall <item>
-    if args[1] == 'findallmatch' then
-        Write.Debug('Searching for all matches for %s', args[2])
-        find_all_items(args[2], 'partial')
+    if args[1] == 'findallmatch' and (args[2] ~= 'pack' and args[2] ~= 'bank') then
+        Write.Info('Usage: /give findallmatch <pack|bank> <item>')
+        return
+    end
+    if args[1] == 'findallmatch' and (args[2] == 'pack' or args[2] == 'bank') then
+        Write.Debug('Searching %s for all matches for %s', args[2], args[3])
+        find_all_items(args[2], args[3], 'partial')
         return
     end
 
@@ -517,7 +566,7 @@ local give = function (...)
     -- Make sure we have the right target
     set_target(target)
     if not check_target(target) then
-        Write.Info('Target "%s" not found', target)
+        Write.Error('Target "%s" not found', target)
         return
     end
 
@@ -539,12 +588,14 @@ local give = function (...)
     local found_items = {}
     for k,v in pairs(settings[target]) do
         Write.Debug('Attempting to give %s to %s', k, target)
-        local results = find_all_items(k, 'exact')
+        local results = find_all_items('pack', k, 'exact')
+        if results == nil then goto continue end
         if #results > 0 then
             for i, item in ipairs(results) do
                 table.insert(found_items, item)
             end
         end
+        ::continue::
     end
     
     -- Iterate through all found items and give them to the target

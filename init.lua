@@ -299,61 +299,6 @@ local click_trade = function()
     end
 end
 
--- Gives an item to the target
-local give_item = function (name, target)
-
-    -- Always make sure we have the right target before attempting a trade
-    set_target(target)
-    if not check_target(target) then
-        Write.Info('Target "%s" not found', target)
-        return
-    end
-
-    -- Move to our target if we are not already close
-    if target_distance(target) > 15 then
-        Write.Debug('Moving to %s', target)
-        nav_target(target)
-    end
-
-    -- Find if the item exists at all in the inventory
-    -- This is a very fast search, but only returns the first match
-    if find_item(name) == nil then
-        Write.Debug('"%s" was not found', name)
-        return
-    end
-
-    -- Get a list of all items in the inventory that match the name
-    local items = find_all_items(name, 'exact')
-
-    -- If we don't find any matches, then return
-    if #items == 0 then
-        Write.Debug('"%s" was not found', name)
-        return
-    end
-
-    -- Iterate through all matching inventory items, and give them to the target
-    local trade_count = 1
-    local trade_slots = 8
-    for i,v in ipairs(items) do
-
-        Write.Debug('Giving "%s" from "%s"', v.name, v.slot)
-        mq.cmd('/shift /itemnotify in ' .. v.slot .. ' leftmouseup')
-        mq.delay(WaitTime, cursor_has_item)
-
-        -- Click theitem on to the target to begin the trade
-        mq.cmd('/click left target')
-        mq.delay(WaitTime, cursor_is_empty)
-
-        -- Click the trade button if we have filled up our trade slots
-        -- or if we are on the last item to be traded
-        if trade_count % trade_slots == 0 or i == #items then
-            click_trade()
-        end
-        trade_count = trade_count + 1
-    end
-
-end
-
 -- Instructs the target character to give us items
 local function ask_for_items(target)
 
@@ -588,11 +533,33 @@ local give = function (...)
     -- Navigate to the target
     nav_target(target)
 
-    -- Iterate through all configured items 
-    -- and attempt to give them to the target
+    -- Build a list of all items and their slots
+    -- found_items should look like this:
+    -- { {name='item1', slot='pack1 1'}, {name='item2', slot='pack2 2'}, ... }
+    local found_items = {}
     for k,v in pairs(settings[target]) do
         Write.Debug('Attempting to give %s to %s', k, target)
-        give_item(k, target)
+        local results = find_all_items(k, 'exact')
+        if #results > 0 then
+            for i, item in ipairs(results) do
+                table.insert(found_items, item)
+            end
+        end
+    end
+    
+    -- Iterate through all found items and give them to the target
+    for i, item in ipairs(found_items) do
+        Write.Debug('Giving "%s" from "%s"', item.name, item.slot)
+        mq.cmd('/shift /itemnotify in ' .. item.slot .. ' leftmouseup')
+        mq.delay(WaitTime, cursor_has_item)
+        mq.cmd('/click left target')
+        mq.delay(WaitTime, cursor_is_empty)
+
+        -- Click the trade button if we have filled up our trade slots
+        -- or if we are on the last item to be traded
+        if i == #found_items or i % 8 == 0 then
+            click_trade()
+        end
     end
 
     -- Let the target know we are done

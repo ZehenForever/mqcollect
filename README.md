@@ -1,6 +1,17 @@
 # mqcollect
 
-A Lua script for MQ + E3 that allows individual characters to store a list of items they want to collect from the other characers in their group.
+A Lua script for MQ + E3 that allows individual characters to store a list of items they want to collect from the other characers in their group or connected to e3.
+
+This is most useful for managing storage or tradeskill mules, or quickly transfering items to Bazaar vendors. But it can be used for any situation where you want an easy way to transfer an arbitrary list of items to any character from any other character(s).
+
+## Suppported Scenarios
+ * Collect all defined items on CharOne from all members in group
+ * Collect all defined items on CharOne from all bots connected to e3
+ * Collect all defined items for CharOne from CharTwo's bank
+ * Give all defined items from CharTwo to CharOne
+ * Use `/e3bct`, `/e3bcga`, etc. to broadcast and automate
+
+See the Example Scenarios below for an example of how to move all defined items from a group to the Bazaar vendor.
 
 # Installing
 ```

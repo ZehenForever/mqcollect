@@ -221,24 +221,45 @@ local nav_target = function (target)
     Write.Debug('Arrived at %s', target)
 end
 
-local find_item = function (name, match_type)
+-- Quickly finds an item in the pack or bank
+local find_item = function (location, name, match_type)
+    if location ~= 'pack' and location ~= 'bank' then
+        Write.Error('Invalid search location: %s', location)
+        return
+    end
+
     if match_type == nil then match_type = 'exact' end
-    if match_type == 'exact' then
-        return mq.TLO.FindItem('='..name).Name()
+
+    if location == 'pack' then
+        if match_type == 'exact' then
+            return mq.TLO.FindItem('='..name).Name()
+        elseif match_type == 'partial' then
+            return mq.TLO.FindItem(name).Name()
+        end
+    elseif location == 'bank' then
+        if match_type == 'exact' then
+            return mq.TLO.FindItemBank('='..name).Name()
+        elseif match_type == 'partial' then
+            return mq.TLO.FindItemBank(name).Name()
+        end
     end
-    if match_type == 'partial' then
-        return mq.TLO.FindItem(name).Name()
-    end
+
 end
 
 -- Go through each bag and slot to find all items
 -- that match the name
 local find_all_items = function (location, name, match_type)
+    if location ~= 'pack' and location ~= 'bank' then
+        Write.Error('Invalid search location: %s', location)
+        return
+    end
+
     local items = {}
     local count = 1
 
-    if location ~= 'pack' and location ~= 'bank' then
-        Write.Error('Invalid search location: %s', location)
+    -- Perform a fast search to see if any items match the name
+    if find_item(location, name, match_type) == nil then
+        Write.Debug('No items found matching "%s"', name)
         return
     end
 
@@ -411,11 +432,11 @@ local collect = function (...)
     -- Collect all configured items from the bank for the specified <character>
     if args[1] == 'bank' and args[2] ~= nil then
         local target = args[2]
-        set_target(target)
-        if check_target(target) == false then 
-            Write.Error('Target "%s" not found', target)
-            return
-        end
+        --set_target(target)
+        --if check_target(target) == false then 
+        --    Write.Error('Target "%s" not found', target)
+        --    return
+        --end
         for k,v in pairs(settings[target]) do
             Write.Debug('Attempting to collect %s from bank for %s', k, target)
             local results = find_all_items('bank', k, 'exact')
@@ -510,14 +531,24 @@ local give = function (...)
         /give findall <item>
     ]]
 
-    -- Allow a finditem search for the target
+    -- Finds the first matching item from the inventory
     -- /give find <item>
     if args[1] == 'find' then
         Write.Debug('Searching for %s', args[2])
-        local result = find_item(args[2])
+        local result = find_item('pack', args[2])
         Write.Debug('Found item: %s', result)
         return
     end
+
+    -- Finds the first matching item from the bank
+    -- /give findbank <item>
+    if args[1] == 'findbank' then
+        Write.Debug('Searching for %s', args[2])
+        local result = find_item('bank', args[2])
+        Write.Debug('Found item: %s', result)
+        return
+    end
+
 
     -- Search for all occurrences of an item that exactly matches the name
     -- /give findall <pack|bank> <item>

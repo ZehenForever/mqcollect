@@ -271,12 +271,18 @@ local find_all_items = function (location, name, match_type)
         total_slots = 24
     end
 
+    --Write.Debug('Quick find: %s %s', mq.TLO.FindItem('='..name).ItemSlot(), mq.TLO.FindItem('='..name).ItemSlot2())
+
     -- Iterate through each slot in the location (pack or bank)
     for i = 1, total_slots do
         local inv_slot = location..tostring(i)
 
-        -- Only process bags with slots ; 0 means no bag?
-        if mq.TLO.InvSlot(inv_slot).ID() and mq.TLO.InvSlot(inv_slot).Item.Container() > 0 then
+        -- Only process bags with slots ; nil can mean no bag ; does 0 mean no bag or a bag with zero slots?
+        Write.Debug('Checking %s: %s', inv_slot, mq.TLO.InvSlot(inv_slot).ID())
+        if mq.TLO.InvSlot(inv_slot).ID()
+            and mq.TLO.InvSlot(inv_slot).Item.Container() ~= nil
+            and mq.TLO.InvSlot(inv_slot).Item.Container() > 0
+        then
             local slot_count = mq.TLO.InvSlot(inv_slot).Item.Container()
 
             -- Process each slot in this bag

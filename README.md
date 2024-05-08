@@ -18,7 +18,7 @@ See the Example Scenarios below for an example of how to move all defined items 
 cd C:\YourE3MQ2\lua
 git clone https://github.com/ZehenForever/mqcollect.git collect
 ```
-Or [download the zip file](https://github.com/ZehenForever/mqcollect/archive/refs/heads/main.zip).
+Or [download the zip file](https://github.com/ZehenForever/mqcollect/archive/refs/heads/main.zip), unzip it, and move it to the Lua directory, renaming it to `collect`.
 
 # Usage
 

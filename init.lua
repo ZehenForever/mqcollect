@@ -249,18 +249,18 @@ end
 -- Go through each bag and slot to find all items
 -- that match the name
 local find_all_items = function (location, name, match_type)
-    if location ~= 'pack' and location ~= 'bank' then
-        Write.Error('Invalid search location: %s', location)
-        return
-    end
-
     local items = {}
     local count = 1
+
+    if location ~= 'pack' and location ~= 'bank' then
+        Write.Error('Invalid search location: %s', location)
+        return items
+    end
 
     -- Perform a fast search to see if any items match the name
     if find_item(location, name, match_type) == nil then
         Write.Debug('No items found matching "%s"', name)
-        return
+        return items
     end
 
     -- Set the total slots based on the location
@@ -549,7 +549,6 @@ local give = function (...)
         return
     end
 
-
     -- Search for all occurrences of an item that exactly matches the name
     -- /give findall <pack|bank> <item>
     if args[1] == 'findall' and (args[2] ~= 'pack' and args[2] ~= 'bank') then
@@ -620,13 +619,9 @@ local give = function (...)
     for k,v in pairs(settings[target]) do
         Write.Debug('Attempting to give %s to %s', k, target)
         local results = find_all_items('pack', k, 'exact')
-        if results == nil then goto continue end
-        if #results > 0 then
-            for i, item in ipairs(results) do
-                table.insert(found_items, item)
-            end
+        for i, item in ipairs(results) do
+            table.insert(found_items, item)
         end
-        ::continue::
     end
     
     -- Iterate through all found items and give them to the target

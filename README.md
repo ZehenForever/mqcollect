@@ -9,6 +9,7 @@ This is most useful for managing storage or tradeskill mules, or quickly transfe
  * Collect all defined items on CharOne from all bots connected to e3
  * Collect all defined items for CharOne from CharTwo's bank
  * Give all defined items from CharTwo to CharOne
+ * Move all of a character's defined items to the bank
  * Use `/e3bct`, `/e3bcga`, etc. to broadcast and automate
 
 See the Example Scenarios below for an example of how to move all defined items from a group to the Bazaar vendor.
@@ -55,6 +56,10 @@ From any character, loads the target's configured items, and if the current char
 `/give <character name>`
         
 From any character, loads the specified &lt;character name&gt;'s configured items, and if the current character has any of those, they are given to the specified &lt;character name&gt;.
+
+`/give bank`
+
+From any character, move all of their defined items to the bank. _**NB:** currently requires the bank window to already be open._ 
  
 `/collect`
 
@@ -71,6 +76,10 @@ any items that the current character has configured.
 Iterates through all connected E3 bots and instructs them one at a time
 to use the `/give <character>` command to give the current character 
 any items that the current character has configured.
+
+`/collect bank <character>`
+
+From any character, collect all items for target `<character>` from their bank, placing them into the inventory.  _**NB:** currently requires the bank window to already be open._
 
 `/collect add`
 

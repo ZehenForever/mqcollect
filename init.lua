@@ -397,6 +397,13 @@ local add_item_on_cursor = function (target)
     mq.cmd('/autoinventory')
 end
 
+local move_to_bank = function (slot)
+    mq.cmd('/shift /itemnotify in ' .. slot .. ' leftmouseup')
+    mq.delay(WaitTime, cursor_has_item)
+    mq.cmd('/nomodkey /notify BigBankWnd BIGB_AutoButton leftmouseup')
+    mq.delay(WaitTime, cursor_is_empty)
+end
+
 -- Collects all configured items from the rest of the group
 -- Receives bind callback from /collect
 local collect = function (...)
@@ -529,6 +536,21 @@ local give = function (...)
     -- Debug args
     for i,arg in ipairs(args) do
         Write.Debug('/give arg[%d]: %s', i, arg)
+    end
+
+    if args[1] == 'bank' then
+        Write.Info('Usage: /give bank')
+        local target = mq.TLO.Me.Name()
+        for k,v in pairs(settings[target]) do
+            Write.Debug('Attempting to move %s to bank', k)
+            local results = find_all_items('pack', k, 'exact')
+            if #results > 0 then
+                for i, item in ipairs(results) do
+                    move_to_bank(item.slot)
+                end
+            end
+        end
+        return
     end
 
     --[[

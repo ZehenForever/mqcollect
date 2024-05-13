@@ -282,89 +282,6 @@ local find_item = function (location, name, match_type)
     return item
 end
 
--- Go through each bag and slot to find all items
--- that match the name
-local find_all_items = function (location, name, match_type)
-    local items = {}
-    local count = 1
-
-    if location ~= 'pack' and location ~= 'bank' then
-        Write.Error('Invalid search location: %s', location)
-        return items
-    end
-
-    -- Perform a fast search to see if any items match the name
-    local fast_search = find_item(location, name, match_type)
-    if fast_search['name'] == nil then
-        Write.Debug('No items found matching "%s"', name)
-        return items
-    end
-
-    -- Set the total slots based on the location
-    local total_slots = 0
-    if location == 'pack' then
-        total_slots = 10
-    elseif location == 'bank' then
-        total_slots = 24
-    end
-
-    --Write.Debug('Quick find: %s %s', mq.TLO.FindItem('='..name).ItemSlot(), mq.TLO.FindItem('='..name).ItemSlot2())
-
-    -- Iterate through each slot in the location (pack or bank)
-    for i = 1, total_slots do
-        local inv_slot = location..tostring(i)
-
-        -- Only process bags with slots ; nil can mean no bag ; does 0 mean no bag or a bag with zero slots?
-        Write.Debug('Checking %s: %s', inv_slot, mq.TLO.InvSlot(inv_slot).ID())
-        if mq.TLO.InvSlot(inv_slot).ID()
-            and mq.TLO.InvSlot(inv_slot).Item.Container() ~= nil
-            and mq.TLO.InvSlot(inv_slot).Item.Container() > 0
-        then
-            local slot_count = mq.TLO.InvSlot(inv_slot).Item.Container()
-
-            -- Process each slot in this bag
-            for j = 1, slot_count do
-
-                -- If we find an item in this slot
-                if mq.TLO.InvSlot(inv_slot).Item.Item(j)() ~= nil then
-                    local item = mq.TLO.InvSlot(inv_slot).Item.Item(j)
-                    local pack_slot = inv_slot .. ' ' .. j
-                    local found = false
-
-                    -- If we need an exact match
-                    if match_type == 'exact' then
-                        if item.Name() == name then
-                            Write.Debug('Found item: %s in "%s"', item.Name(), pack_slot)
-                            found = true
-                        end
-                    end
-
-                    -- If we need a partial match
-                    if match_type == 'partial' then
-                        local ok = string.find(string.lower(item.Name()),string.lower(name),nil,true) ~= nil
-                        if ok then
-                            Write.Debug('Found matching item: %s in %s', item.Name(), pack_slot)
-                            found = true
-                        end
-                    end
-
-                    -- If we found the item, add it to our list
-                    if found then
-                        items[count] = {
-                            ['name'] = item.Name(),
-                            ['slot'] = pack_slot
-                        }
-                        count = count + 1
-                    end
-
-                end
-            end
-        end
-    end
-
-    return items
-end
-
 -- Click the trade window Trade button
 local click_trade = function()
     mq.cmd('/notify TradeWnd TRDW_Trade_Button leftmouseup')
@@ -720,30 +637,6 @@ local give = function (...)
             return
         end
         Write.Info('Found item: %s in %s', result['name'], result['slot'])
-        return
-    end
-
-    -- Search for all occurrences of an item that exactly matches the name
-    -- /give findall <pack|bank> <item>
-    if args[1] == 'findall' and (args[2] ~= 'pack' and args[2] ~= 'bank') then
-        Write.Info('Usage: /give findall <pack|bank> <item>')
-        return
-    end
-    if args[1] == 'findall' and (args[2] == 'pack' or args[2] == 'bank') then
-        Write.Debug('Searching %s for all %s', args[2], args[3])
-        find_all_items(args[2], args[3], 'exact')
-        return
-    end
-
-    -- Search for all occurrences of an item that partially matches the name
-    -- /give findall <item>
-    if args[1] == 'findallmatch' and (args[2] ~= 'pack' and args[2] ~= 'bank') then
-        Write.Info('Usage: /give findallmatch <pack|bank> <item>')
-        return
-    end
-    if args[1] == 'findallmatch' and (args[2] == 'pack' or args[2] == 'bank') then
-        Write.Debug('Searching %s for all matches for %s', args[2], args[3])
-        find_all_items(args[2], args[3], 'partial')
         return
     end
 

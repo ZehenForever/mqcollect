@@ -14,6 +14,9 @@ This is most useful for managing storage or tradeskill mules, or quickly transfe
 
 See the Example Scenarios below for an example of how to move all defined items from a group to the Bazaar vendor.
 
+> [!NOTE]
+> We use the `/target` command in a few places to facilitate trading, so if you have familiars or any pets with your character's name in it, you may want to rename them to avoid accidentlly giving them items intended for the character.
+
 # Installing
 ```
 cd C:\YourE3MQ2\lua
@@ -77,9 +80,13 @@ Iterates through all connected E3 bots and instructs them one at a time
 to use the `/give <character>` command to give the current character 
 any items that the current character has configured.
 
+`/collect bank`
+
+Alias for "/collect bank &lt;current character&gt;"
+
 `/collect bank <character>`
 
-From any character, collect all items for target `<character>` from their bank, placing them into the inventory.  _**NB:** currently requires the bank window to already be open._
+From any character, collect all items for specified `<character>` from the bank, placing them into the current character's inventory.  _**NB:** currently requires the bank window to already be open._
 
 `/collect add`
 

@@ -91,6 +91,9 @@ local char_done = true
 -- An example config for items that each character wants
 -- We'll use this to write out an example config file if one does not exist
 local example_config = {
+    ['General'] = {
+        ['FastMode'] = true,
+    },
     ['CharacterOne'] = {
         ['Bone Chips'] = true,
         ['Rubicite Ore'] = true,
@@ -121,6 +124,14 @@ local save_settings = function (table)
     ini.save(config_file, table)
 end
 
+-- Returns the length of a table
+local table_length = function(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
+
+-- Sorts a table by key and then by value
 local table_sort = function (tbl)
     local t = {}
     local keys = {}
@@ -212,7 +223,7 @@ local nav_target = function (target)
     -- then target the new target before navigating
     set_target(target)
     mq.delay(WaitTime, have_target)
-    mq.cmd('/nav target distance=10')
+    mq.cmd('/nav target distance=20')
 
     -- Wait while we travel
     while mq.TLO.Navigation.Active() do
@@ -223,27 +234,52 @@ end
 
 -- Quickly finds an item in the pack or bank
 local find_item = function (location, name, match_type)
+    -- { ['name'] = 'Item Name', ['slot'] = 'pack3 2' }
+    local item = {}
     if location ~= 'pack' and location ~= 'bank' then
         Write.Error('Invalid search location: %s', location)
-        return
+        return item
     end
 
     if match_type == nil then match_type = 'exact' end
+    Write.Debug('Searching %s for "%s"', location, name)
 
-    if location == 'pack' then
-        if match_type == 'exact' then
-            return mq.TLO.FindItem('='..name).Name()
-        elseif match_type == 'partial' then
-            return mq.TLO.FindItem(name).Name()
-        end
-    elseif location == 'bank' then
-        if match_type == 'exact' then
-            return mq.TLO.FindItemBank('='..name).Name()
-        elseif match_type == 'partial' then
-            return mq.TLO.FindItemBank(name).Name()
+    -- Subtract from the ItemSlot() number
+    local subtract = 0
+
+    local search = function ()
+        if location == 'pack' then
+            subtract = 22
+            if match_type == 'exact' then
+                return mq.TLO.FindItem('='..name)
+            elseif match_type == 'partial' then
+                return mq.TLO.FindItem(name)
+            end
+        elseif location == 'bank' then
+            subtract = -1
+            if match_type == 'exact' then
+                return mq.TLO.FindItemBank('='..name)
+            elseif match_type == 'partial' then
+                return mq.TLO.FindItemBank(name)
+            end
+        else
+            Write.Error('Invalid search location: %s', location)
+            return nil
         end
     end
+    local search_result = search()
 
+    if search_result.ID() == nil then
+        Write.Debug('No items found matching "%s"', name)
+        return item
+    end
+    Write.Debug("Found item: %s %s", search_result.Name(), search_result.ItemSlot() .. ' ' .. search_result.ItemSlot2())
+
+    item = {
+        ['name'] = search_result.Name(),
+        ['slot'] = location .. (search_result.ItemSlot()-subtract) .. ' ' .. (search_result.ItemSlot2()+1)
+    }
+    return item
 end
 
 -- Go through each bag and slot to find all items
@@ -258,7 +294,8 @@ local find_all_items = function (location, name, match_type)
     end
 
     -- Perform a fast search to see if any items match the name
-    if find_item(location, name, match_type) == nil then
+    local fast_search = find_item(location, name, match_type)
+    if fast_search['name'] == nil then
         Write.Debug('No items found matching "%s"', name)
         return items
     end
@@ -404,6 +441,77 @@ local move_to_bank = function (slot)
     mq.delay(WaitTime, cursor_is_empty)
 end
 
+local scan_items = function (location)
+    --[[
+        { 
+          ['pack'] = {
+            ['Item One'] = { 'pack3 2, pack3 3' },
+            ['Item Two'] = { 'pack4 1, pack4 2' },
+            ...
+          },
+          ['bank'] = {
+            ['Item Four'] = { 'bank3 2, bank3 3' },
+            ['Item Five'] = { 'bank4 1, bank4 2' },
+            ...
+          }
+        }
+    ]]
+    local items = {}
+
+    if location ~= 'pack' and location ~= 'bank' then
+        Write.Error('Invalid search location: %s', location)
+        return items
+    end
+
+    -- Set the total slots based on the location
+    local total_slots = 0
+    if location == 'pack' then
+        total_slots = 10
+    elseif location == 'bank' then
+        total_slots = 24
+    end
+
+    if items[location] == nil then
+        items[location] = {}
+    end
+
+    --Write.Debug('Quick find: %s %s', mq.TLO.FindItem('='..name).ItemSlot(), mq.TLO.FindItem('='..name).ItemSlot2())
+
+    -- Iterate through each slot in the location (pack or bank)
+    for i = 1, total_slots do
+        local inv_slot = location..tostring(i)
+
+        -- Only process bags with slots ; nil can mean no bag ; does 0 mean no bag or a bag with zero slots?
+        Write.Debug('Scanning %s', inv_slot)
+        if mq.TLO.InvSlot(inv_slot).ID()
+            and mq.TLO.InvSlot(inv_slot).Item.Container() ~= nil
+            and mq.TLO.InvSlot(inv_slot).Item.Container() > 0
+        then
+            local slot_count = mq.TLO.InvSlot(inv_slot).Item.Container()
+
+            -- Process each slot in this bag
+            local count = 1
+            for j = 1, slot_count do
+                if mq.TLO.InvSlot(inv_slot).Item.Item(j)() ~= nil then
+                    local item = mq.TLO.InvSlot(inv_slot).Item.Item(j)
+                    local pack_slot = inv_slot .. ' ' .. j
+
+                    -- If we don't have this item in our list yet, add it
+                    if items[location][item.Name()] == nil then
+                        items[location][item.Name()] = { pack_slot }
+                    else
+                        table.insert(items[location][item.Name()], pack_slot)
+                    end
+
+                end
+
+            end
+        end
+    end
+
+    return items
+end
+
 -- Collects all configured items from the rest of the group
 -- Receives bind callback from /collect
 local collect = function (...)
@@ -443,30 +551,35 @@ local collect = function (...)
 
     -- Command: /collect bank <character>
     -- Collect all configured items from the bank for the specified <character>
-    if args[1] == 'bank' and args[2] ~= nil then
+    if args[1] == 'bank' then
+        if args[2] == nil then
+            args[2] = mq.TLO.Me.Name()
+        end
         local target = args[2]
-        --set_target(target)
-        --if check_target(target) == false then 
-        --    Write.Error('Target "%s" not found', target)
-        --    return
-        --end
-        for k,v in pairs(settings[target]) do
+        Write.Info('Collecting items from bank for %s', target)
+
+        -- Scan the bank for all items that the current character has
+        local bank_items = scan_items('bank')
+
+        -- Iterate through the target character's items and see if we have any
+        for k,_ in pairs(settings[target]) do
             Write.Debug('Attempting to collect %s from bank for %s', k, target)
-            local results = find_all_items('bank', k, 'exact')
-            if results == nil then goto continue end
-            if #results > 0 then
-                for i, item in ipairs(results) do
-                    mq.cmd('/shift /itemnotify in ' .. item.slot .. ' leftmouseup')
+
+            -- If we have the item, give all of them to the target
+            if bank_items['bank'][k] ~= nil then
+                for i, slot in ipairs(bank_items['bank'][k]) do
+                    Write.Debug('Moving %s from %s to inventory', k, slot)
+                    mq.cmd('/shift /itemnotify in ' .. slot .. ' leftmouseup')
                     mq.delay(WaitTime, cursor_has_item)
                     mq.cmd('/autoinventory')
                     mq.delay(WaitTime, cursor_is_empty)
-                    
-                    -- TODO: Figure out why the last item in the set needs to be autoinventory'd twice
+                    --TODO: Figure out why we have to do this twice...
                     mq.cmd('/autoinventory')
-                end
+                 end
             end
-            ::continue::
         end
+        Write.Info('All items moved to inventory')
+        return
     end
 
     -- Command: /collect list
@@ -484,11 +597,29 @@ local collect = function (...)
         return
     end
 
+    -- Command /collect scan <pack|bank>
+    -- Scan the pack or bank for all items and their slots
+    if args[1] == 'scan' and (args[2] == 'pack' or args[2] == 'bank') then
+        local location = args[2]
+        local items = scan_items(location)
+        for k,v in pairs(items[location]) do
+            Write.Info('%s', k)
+            for i, slot in ipairs(v) do
+                Write.Debug('  %s', slot)
+            end
+        end
+        return
+    end
+
     -- Command: /collect debug
     -- Allow setting debug mode to get more verbose output
-    if args[1] == 'debug' then
+    if args[1] == 'debug' and (args[2] == nil or string.lower(args[2]) == 'true') then
         Write.loglevel = 'debug'
         Write.Info('Debug mode enabled')
+        return
+    elseif args[1] == 'debug' and string.lower(args[2]) == 'false' then
+        Write.loglevel = 'info'
+        Write.Info('Debug mode disabled')
         return
     end
 
@@ -527,9 +658,6 @@ local collect = function (...)
 end
 
 -- Bind callback for /give
--- Command: /give <character>
--- Loads the target's configured items and gives any items
--- from the current character's inventory to the target
 local give = function (...)
     local args = {...}
 
@@ -538,18 +666,28 @@ local give = function (...)
         Write.Debug('/give arg[%d]: %s', i, arg)
     end
 
+    -- Build a list of all items that the current character has
+    local my_items = scan_items('pack')
+
+    -- Command: /give bank
+    -- Command: /give bank <character>
+    -- Move all defined items from the current character's inventory to the bank
     if args[1] == 'bank' then
-        Write.Info('Usage: /give bank')
+        Write.Info('Moving all items to bank')
         local target = mq.TLO.Me.Name()
+        if args[2] ~= nil then
+            target = args[2]
+        end
         for k,v in pairs(settings[target]) do
             Write.Debug('Attempting to move %s to bank', k)
-            local results = find_all_items('pack', k, 'exact')
-            if #results > 0 then
-                for i, item in ipairs(results) do
-                    move_to_bank(item.slot)
+            if my_items['pack'][k] ~= nil then
+                for i, slot in ipairs(my_items['pack'][k]) do
+                    Write.Debug('Moving %s from %s to bank', k, slot)
+                    move_to_bank(slot)
                 end
             end
         end
+        Write.Info('All items moved to bank')
         return
     end
 
@@ -564,7 +702,11 @@ local give = function (...)
     if args[1] == 'find' then
         Write.Debug('Searching for %s', args[2])
         local result = find_item('pack', args[2])
-        Write.Debug('Found item: %s', result)
+        if result['name'] == nil then
+            Write.Debug('No items found matching "%s"', args[2])
+            return
+        end
+        Write.Info('Found item: %s in %s', result['name'], result['slot'])
         return
     end
 
@@ -573,7 +715,11 @@ local give = function (...)
     if args[1] == 'findbank' then
         Write.Debug('Searching for %s', args[2])
         local result = find_item('bank', args[2])
-        Write.Debug('Found item: %s', result)
+        if result['name'] == nil then
+            Write.Debug('No items found matching "%s"', args[2])
+            return
+        end
+        Write.Info('Found item: %s in %s', result['name'], result['slot'])
         return
     end
 
@@ -603,7 +749,7 @@ local give = function (...)
 
     --[[
         The user commands 
-        /give
+        /give target
         /give <character>
     ]]
 
@@ -640,29 +786,34 @@ local give = function (...)
     -- Navigate to the target
     nav_target(target)
 
-    -- Build a list of all items and their slots
-    -- found_items should look like this:
-    -- { {name='item1', slot='pack1 1'}, {name='item2', slot='pack2 2'}, ... }
-    local found_items = {}
-    for k,v in pairs(settings[target]) do
+    -- Iterte through the target character's items and see if we have any
+    local count = 0
+    local found = 0
+    local total = table_length(settings[target])
+    for k,_ in pairs(settings[target]) do
         Write.Debug('Attempting to give %s to %s', k, target)
-        local results = find_all_items('pack', k, 'exact')
-        for i, item in ipairs(results) do
-            table.insert(found_items, item)
-        end
-    end
-    
-    -- Iterate through all found items and give them to the target
-    for i, item in ipairs(found_items) do
-        Write.Debug('Giving "%s" from "%s"', item.name, item.slot)
-        mq.cmd('/shift /itemnotify in ' .. item.slot .. ' leftmouseup')
-        mq.delay(WaitTime, cursor_has_item)
-        mq.cmd('/click left target')
-        mq.delay(WaitTime, cursor_is_empty)
+        count = count + 1
 
-        -- Click the trade button if we have filled up our trade slots
-        -- or if we are on the last item to be traded
-        if i == #found_items or i % 8 == 0 then
+        -- If we have the item, give it to the target
+        if my_items['pack'][k] ~= nil then
+            for i, slot in ipairs(my_items['pack'][k]) do
+                found = found + 1
+                Write.Debug('Giving "%s" from "%s"', k, slot)
+                mq.cmd('/shift /itemnotify in ' .. slot .. ' leftmouseup')
+                mq.delay(WaitTime, cursor_has_item)
+                mq.cmd('/click left target')
+                mq.delay(WaitTime, cursor_is_empty)
+
+                -- If have filled up our trade window, click the trade button
+                Write.Debug('We are on %d of %d items', count, total)
+                if found % 8 == 0 then
+                    click_trade()
+                end
+            end
+        end
+
+        -- If we gone through all of the target items, click the trade button
+        if count == total then
             click_trade()
         end
     end

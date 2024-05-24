@@ -16,18 +16,32 @@
         current character has any, they are given to the target <character>.
  
     /collect
+        Alias for '/collect group'
+    
+    /collect group
         Iterates through group members and instructs them one at a time
         to use the /give <character> command to give the current character 
         any items that the current character has configured.
+    
+    /collect e3bots
+        Iterates through all connected e3 bots and instructs them one at a time
+        to use the /give <character> command to give the current character 
+        any items that the current character has configured.
+    
+    /collect bank
+        Collects all configured items from the current character's bank.
+    
+    /collect bank <character>
+        Gathers all of target <character>'s configured items from the current character's bank.
 
     /collect add
-        Adds the item on the current character's cursor to their ini section
+        Adds the item on the current character's cursor to their ini section.
 
     /collect add target
-        Adds the item on the current character's cursor to their current target's ini section
+        Adds the item on the current character's cursor to their current target's ini section.
    
     /collect add <character>
-        Adds the item on the current character's cursor to the <character>'s ini section
+        Adds the item on the current character's cursor to the <character>'s ini section.
    
     /collect debug
         Enables debug mode for more verbose output.
@@ -454,6 +468,7 @@ local collect = function (...)
     end
 
     -- Command: /collect e3bots
+    -- Collect all configured items from all connected e3 bots
     if args[1] == 'e3bots' then
         local connectedClients = mq.TLO.MQ2Mono.Query('e3,E3Bots.ConnectedClients')()
         local e3peers = split(connectedClients, ',')

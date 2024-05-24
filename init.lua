@@ -453,6 +453,19 @@ local collect = function (...)
         Write.Debug('/collect arg[%d]: %s', i, arg)
     end
 
+    if args[1] == 'help' then
+        Write.Info('Usage: /collect')
+        Write.Info('Usage: /collect debug')
+        Write.Info('Usage: /collect group')
+        Write.Info('Usage: /collect e3bots')
+        Write.Info('Usage: /collect bank')
+        Write.Info('Usage: /collect bank <character>')
+        Write.Info('Usage: /collect add')
+        Write.Info('Usage: /collect add target')
+        Write.Info('Usage: /collect add <character>')
+        return
+    end
+
     -- Command: /collect group
     --      or: /collect
     -- Loop through the group, and ask each group member for items
@@ -461,7 +474,7 @@ local collect = function (...)
         for i = 1, mq.TLO.Group.Members() do
             local member = mq.TLO.Group.Member(i)
             if member then
-                Write.Debug('Asking %s for items I want', member.Name())
+                Write.Info('Asking %s for items I want', member.Name())
                 ask_for_items(member.Name())
             end
         end
@@ -472,10 +485,20 @@ local collect = function (...)
     if args[1] == 'e3bots' then
         local connectedClients = mq.TLO.MQ2Mono.Query('e3,E3Bots.ConnectedClients')()
         local e3peers = split(connectedClients, ',')
+
+        -- Remove ourselves from the list
+        for i = 1, #e3peers do
+            if e3peers[i] == mq.TLO.Me.Name() then
+                table.remove(e3peers, i)
+            end
+        end
+
+        -- Iterate through our e3 peers and ask them for items
+        Write.Debug('Connected e3 peers: %s', connectedClients)
         for i, name in ipairs(e3peers) do
             local member = mq.TLO.Spawn(string.format('pc = %s', name))
             if member() then
-                Write.Debug('Asking %s for items I want', member.Name())
+                Write.Info('Asking %s for items I want', member.Name())
                 ask_for_items(member.Name())
             end
         end
@@ -698,15 +721,16 @@ local give = function (...)
     local count = 0
     local found = 0
     local total = table_length(settings[target])
+    Write.Info('%s is giving items to %s', mq.TLO.Me.Name(), target)
     for k,_ in pairs(settings[target]) do
-        Write.Debug('Attempting to give %s to %s', k, target)
+        --Write.Debug('Looking to see if I have "%s" to give to %s', k, target)
         count = count + 1
 
         -- If we have the item, give it to the target
         if my_items['pack'][k] ~= nil then
             for i, slot in ipairs(my_items['pack'][k]) do
                 found = found + 1
-                Write.Debug('Giving "%s" from "%s"', k, slot)
+                Write.Info('%s is giving "%s" from "%s" to %s', mq.TLO.Me.Name(), k, slot, target)
                 mq.cmd('/shift /itemnotify in ' .. slot .. ' leftmouseup')
                 mq.delay(WaitTime, cursor_has_item)
                 mq.cmd('/click left target')
